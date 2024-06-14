@@ -1,51 +1,53 @@
-import * as cdk from '@aws-cdk/core';
-import * as lambda from '@aws-cdk/aws-lambda';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { LambdaInvoke } from 'aws-cdk-lib/aws-stepfunctions-tasks';
+import { Choice, Condition, DefinitionBody, Fail, Pass, StateMachine, Succeed, Wait, WaitTime } from 'aws-cdk-lib/aws-stepfunctions';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { join } from 'path';
 
-export class StepFunctionsCdkStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+export class CdkDeployStepFunctionsStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     // Define the HelloWorld Lambda function
-    const helloWorldLambda = new lambda.Function(this, 'HelloWorldHandler', {
-      runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'hello-world.handler',
-      code: lambda.Code.fromAsset('lambda'),
+    const helloWorldLambda = new NodejsFunction(this, 'HelloWorldHandler', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: join(__dirname, '../lambda/hello-world.ts'),
+      handler: 'handler',
     });
 
     // Define a task that invokes the Lambda function
-    const helloWorldTask = new tasks.LambdaInvoke(this, 'HelloWorldTask', {
+    const helloWorldTask = new LambdaInvoke(this, 'HelloWorldTask', {
       lambdaFunction: helloWorldLambda,
       outputPath: '$.Payload',
     });
 
     // Define a Pass state (no-op) as an example
-    const passState = new sfn.Pass(this, 'PassState', {
-      result: { value: 'This is a pass state' },
+    const passState = new Pass(this, 'PassState');
+
+    const waitState = new Wait(this, 'WaitState', {
+      time: WaitTime.duration(Duration.seconds(5)),
     });
 
     // Define a Succeed state
-    const succeedState = new sfn.Succeed(this, 'SucceedState');
+    const succeedState = new Succeed(this, 'SucceedState');
 
     // Define a Fail state
-    const failState = new sfn.Fail(this, 'FailState', {
+    const failState = new Fail(this, 'FailState', {
       error: 'Error',
       cause: 'Something went wrong',
     });
 
     // Define a Choice state
-    const choiceState = new sfn.Choice(this, 'ChoiceState');
-    choiceState.when(sfn.Condition.booleanEquals('$.success', true), succeedState);
-    choiceState.when(sfn.Condition.booleanEquals('$.success', false), failState);
+    const choiceState = new Choice(this, 'ChoiceState');
+    choiceState.when(Condition.booleanEquals('$.success', true), succeedState);
+    choiceState.when(Condition.booleanEquals('$.success', false), failState);
 
     // Define the state machine
-    const stateMachine = new sfn.StateMachine(this, 'StateMachine', {
-      definition: helloWorldTask.next(choiceState).next(passState),
-    });
-
-    new cdk.CfnOutput(this, 'StateMachineARN', {
-      value: stateMachine.stateMachineArn,
+    const stateMachine = new StateMachine(this, 'StateMachine', {
+      definitionBody: DefinitionBody.fromChainable(helloWorldTask.next(passState).next(waitState).next(choiceState))
+      // definition: helloWorldTask.next(passState).next(choiceState),
     });
   }
 }
