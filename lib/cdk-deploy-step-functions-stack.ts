@@ -4,7 +4,6 @@ import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Choice, Condition, DefinitionBody, Fail, Pass, StateMachine, Succeed, Wait, WaitTime } from 'aws-cdk-lib/aws-stepfunctions';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { join } from 'path';
 
 export class CdkDeployStepFunctionsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -13,7 +12,7 @@ export class CdkDeployStepFunctionsStack extends Stack {
     // Define the HelloWorld Lambda function
     const helloWorldLambda = new NodejsFunction(this, 'HelloWorldHandler', {
       runtime: Runtime.NODEJS_20_X,
-      entry: join(__dirname, '../lambda/hello-world.ts'),
+      entry: 'lib/lambda/hello-world.ts',
       handler: 'handler',
     });
 
