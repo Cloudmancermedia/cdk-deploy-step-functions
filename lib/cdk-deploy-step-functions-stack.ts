@@ -44,8 +44,8 @@ export class CdkDeployStepFunctionsStack extends Stack {
 
     // Define a Fail state
     const failState = new Fail(this, 'FailState', {
-      error: 'Error',
-      cause: 'Value is less than .3',
+      error: 'Error: Value is less than .33',
+      causePath: "States.JsonToString($.value)",
     });
 
     // Define a Choice state
@@ -54,11 +54,11 @@ export class CdkDeployStepFunctionsStack extends Stack {
     choiceState.when(
       Condition.and(
         Condition.numberGreaterThanEquals('$.value', 0.33),
-        Condition.numberLessThanEquals('$.value', 0.66)
+        Condition.numberLessThan('$.value', 0.66)
       ),
       randomNumberTask
     );
-    choiceState.when(Condition.numberGreaterThan('$.value', 0.66), succeedState);
+    choiceState.when(Condition.numberGreaterThanEquals('$.value', 0.66), succeedState);
 
     // Define the state machine
     const stateMachine = new StateMachine(this, 'StateMachine', {
