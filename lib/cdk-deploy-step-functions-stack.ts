@@ -35,7 +35,6 @@ export class CdkDeployStepFunctionsStack extends Stack {
       resultPath: '$'
     });
 
-
     const waitState = new Wait(this, 'WaitState', {
       time: WaitTime.duration(Duration.seconds(5)),
     });
